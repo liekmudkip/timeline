@@ -24,6 +24,7 @@ import javax.faces.bean.ManagedBean;
 import javax.faces.bean.SessionScoped;
 import javax.faces.context.FacesContext;
 
+import org.apache.log4j.Logger;
 import org.primefaces.event.ItemSelectEvent;
 import org.primefaces.event.timeline.TimelineSelectEvent;
 import org.primefaces.model.chart.AxisType;
@@ -78,40 +79,52 @@ public class BasicTimelineView implements Serializable {
 	HashMap<String, Categories> catMap;
 	HashMap<String, LineChartSeries> serMap;
 	HashMap<String, Stories> storMap;
-
+	static Logger logger;
+	
 	@PostConstruct
 	protected void initialize() {
+		logger = Logger.getLogger(BasicTimelineView.class);
+		try {
+		logger.info("post construct called");
 		dateModel = new LineChartModel();
 		format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		model = new TimelineModel();
+		logger.info("models created");
 		final Type timelindeDataType = new TypeToken<TLTimelineData>() {
 		}.getType();
+		logger.info("timelindeDataType created");
 		ClassLoader classLoader = getClass().getClassLoader();
+		logger.info("classLoader created");
 		File file = new File(classLoader.getResource("vdsdates.json").getFile());
+		logger.info("JSON fileloader created");
 		Gson gson = new Gson();
+		logger.info("gson created");
 		try {
 			JsonReader reader = new JsonReader(new InputStreamReader(new FileInputStream(file), "UTF8"));
 			data = gson.fromJson(reader, timelindeDataType);
 		} catch (FileNotFoundException | UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("could not load jsnon file because : "+e.getMessage()+" "+e.getStackTrace());
+
 		}
+		logger.info("building Maps");
 		catMap = new HashMap<String, Categories>();
 		serMap = new HashMap<String, LineChartSeries>();
 		storMap = new HashMap<String, Stories>();
+		logger.info("Maps built");
 		for (Categories c : data.getCategories()) {
 			catMap.put(c.getId(), c);
 			LineChartSeries series = new LineChartSeries();
 			series.setLabel(c.getTitle());
 			series.setShowLine(false);
 			serMap.put(c.getId(), series);
-
+			logger.info("Category added: "+c.getId());
 		}
 
 		int i = 0;
 		Random randomGenerator = new Random();
 		Calendar cal = Calendar.getInstance();
 		for (Stories s : data.getStories()) {
+			logger.info("Story added: "+s.getTitle());
 			try {
 				adjustStartDateAndAddToStoryMap(cal, s);
 
@@ -156,8 +169,7 @@ public class BasicTimelineView implements Serializable {
 				}
 
 			} catch (ParseException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				logger.info("parse exception in Json: "+e.getMessage());
 			}
 
 		}
@@ -185,6 +197,9 @@ public class BasicTimelineView implements Serializable {
 		axis.setTickFormat("%#d. %b. %y");
 		dateModel.getAxes().put(AxisType.X, axis);
 		System.out.println("done");
+		}catch (Exception e) {
+			logger.error("unexpected exception "+e.getMessage()+" "+e.getMessage());
+		}
 
 	}
 
